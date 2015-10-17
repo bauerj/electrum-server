@@ -557,8 +557,14 @@ class BlockchainProcessor(Processor):
                 txo = self.bitcoind('sendrawtransaction', params)
                 print_log("sent tx:", txo)
                 result = txo
+		
             except BaseException, e:
-                result = str(e)  # do not send an error
+		if e.get('code') == -26:
+		    # If we return anything that's not the transaction hash,
+		    #  it's considered an error message
+		    result = "Your client produced a transaction that current versions of Bitcoin don't accept. Please upgrade to Electrum 2.5.1"
+		else:
+                    result = str(e)  # do send an error
                 print_log("error:", result, params)
 
         elif method == 'blockchain.transaction.get_merkle':
