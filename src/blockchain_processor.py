@@ -556,16 +556,21 @@ class BlockchainProcessor(Processor):
             try:
                 txo = self.bitcoind('sendrawtransaction', params)
                 print_log("sent tx:", txo)
-                result = txo
-		
+                result = txo	
             except BaseException, e:
-		if e.get('code') == -26:
+		error = e.args[0]
+		if error["code"] == -26:
 		    # If we return anything that's not the transaction hash,
 		    #  it's considered an error message
-		    result = "Your client produced a transaction that current versions of Bitcoin don't accept. Please upgrade to the latest version of Electrum\n"
-		    result += "(" + e.get("message") + ")"
+		    message = error["message"]
+		    if "non-mandatory-script-verify-flag" in message:
+		        result = "Your client produced a transaction that current versions of Bitcoin don't accept. Please upgrade to Electrum 2.5.1 or newer\n"
+		    else:
+			result = "The transaction was rejected by network rules. Please submit a bug report with the following details:"
+		        result += "(" + message + ")\n"
+			result += "[" + params + "]"
 		else:
-                    result = str(e)  # do send an error
+                    result = error["message"]  # do send an error
                 print_log("error:", result, params)
 
         elif method == 'blockchain.transaction.get_merkle':
