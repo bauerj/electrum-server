@@ -42,6 +42,7 @@ class IrcThread(threading.Thread):
         self.pruning_limit = config.get('leveldb', 'pruning_limit')
         self.nick = 'E_' + self.nick
         self.password = None
+        self.hidden_service = config.get('server', 'hidden_service')
 
     def getname(self):
         s = 'v' + VERSION + ' '
@@ -118,6 +119,9 @@ class IrcThread(threading.Thread):
             client = irc.client.Reactor()
             try:
                 c = client.server().connect('irc.freenode.net', 6667, self.nick, self.password, ircname=self.ircname)
+                if self.hidden_service.endswith(".onion"):
+                    ircname = self.hidden_service + ' ' + self.getname()
+                    client.server().connect('irc.freenode.net', 6667, self.nick + "_tor", self.password, ircname=ircname)
             except irc.client.ServerConnectionError:
                 logger.error('irc', exc_info=True)
                 time.sleep(10)

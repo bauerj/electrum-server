@@ -3,6 +3,8 @@
 username = 
 # hostname. set it to a FQDN in order to be reached from outside
 host = localhost
+# Add your .onion address here if your server has one.
+#hidden_service = 
 # ports
 electrum_rpc_port = 8000
 stratum_tcp_port = 50001
