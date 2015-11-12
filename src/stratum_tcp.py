@@ -34,7 +34,10 @@ class TcpSession(Session):
         else:
             self._connection = connection
 
-        self.address = address[0] + ":%d"%address[1]
+	if config.get('server', 'anonymize_logging') == 'no':
+	        self.address = address[0] + ":%d"%address[1]
+	else:
+		self.address = '**.**.**.**'
         self.name = "TCP " if not use_ssl else "SSL "
         self.timeout = 1000
         self.dispatcher.add_session(self)
@@ -228,6 +231,8 @@ class TcpServer(threading.Thread):
                             session = TcpSession(self.dispatcher, connection, address, 
                                                  use_ssl=self.use_ssl, ssl_certfile=self.ssl_certfile, ssl_keyfile=self.ssl_keyfile)
                         except BaseException as e:
+			    if config.get('server', 'anonymize_logging') != 'no':
+				address = '**.**.**.**'
                             logger.error("cannot start TCP session" + str(e) + ' ' + repr(address))
                             connection.close()
                             continue

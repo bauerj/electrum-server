@@ -337,7 +337,10 @@ class HttpSession(Session):
     def __init__(self, dispatcher, session_id):
         Session.__init__(self, dispatcher)
         self.pending_responses = Queue.Queue()
-        self.address = session_id
+	if config.get('server', 'anonymize_logging') == 'no':
+	        self.address = session_id
+	else:
+		self.address = '**.**.**.**'
         self.name = "HTTP"
         self.timeout = 60
         self.dispatcher.add_session(self)
