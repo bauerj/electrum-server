@@ -199,6 +199,12 @@ class TcpServer(threading.Thread):
             else:
                 now = time.time()
                 for fd, session in self.fd_to_session.items():
+                    if session.message and session.response_queue.qsize() > 200:
+                        # DDOS protection, shouldn't happen with a "normal" client
+                        print_log("Closing session with more than 200 waiting responses:", session.address)
+                        session.response_queue = queue.Queue()
+                        stop_session(fd)
+                    
                     if now - session.time > 0.01 and session.message:
                         cmd = session.parse_message()
                         if not cmd: 
