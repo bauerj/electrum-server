@@ -68,6 +68,7 @@ class IrcThread(threading.Thread):
  
     def on_connect(self, connection, event):
         connection.join("#electrum")
+        connection.mode(self.nick, "-i")
 
     def on_join(self, connection, event):
         m = re.match("(E_.*)!", event.source)
