@@ -26,11 +26,11 @@ import time
 import socket
 import ssl
 import threading
-import Queue
+import queue
 import irc.client
-from utils import logger
-from utils import Hash
-from version import VERSION
+from .utils import logger
+from .utils import Hash
+from .version import VERSION
 
 out_msg = []
 
@@ -69,7 +69,7 @@ class IrcThread(threading.Thread):
         self.pruning_limit = config.get('leveldb', 'pruning_limit')
         self.nick = 'E_' + self.nick
         self.password = None
-        self.who_queue = Queue.Queue()
+        self.who_queue = queue.Queue()
 
     def getname(self):
         s = 'v' + VERSION + ' '
@@ -137,7 +137,7 @@ class IrcThread(threading.Thread):
         while not self.processor.shared.stopped():
             try:
                 connection, s = self.who_queue.get(timeout=1)
-            except Queue.Empty:
+            except queue.Empty:
                 continue
             #logger.info("who: "+ s)
             connection.who(s)

@@ -25,14 +25,14 @@ import socket
 import sys
 import threading
 import time
-import Queue
+import queue
 
 
-from processor import Processor
-from utils import Hash, print_log
-from version import VERSION
-from utils import logger
-from ircthread import IrcThread
+from .processor import Processor
+from .utils import Hash, print_log
+from .version import VERSION
+from .utils import logger
+from .ircthread import IrcThread
 
 
 
@@ -43,7 +43,7 @@ class ServerProcessor(Processor):
         self.daemon = True
         self.config = config
         self.shared = shared
-        self.irc_queue = Queue.Queue()
+        self.irc_queue = queue.Queue()
         self.peers = {}
 
         if self.config.get('server', 'irc') == 'yes':
@@ -60,7 +60,7 @@ class ServerProcessor(Processor):
         while True:
             try:
                 event, params = self.irc_queue.get(timeout=1)
-            except Queue.Empty:
+            except queue.Empty:
                 continue
             #logger.info(event + ' ' + repr(params))
             if event == 'join':
@@ -73,7 +73,7 @@ class ServerProcessor(Processor):
 
 
     def get_peers(self):
-        return self.peers.values()
+        return list(self.peers.values())
 
 
     def process(self, request):

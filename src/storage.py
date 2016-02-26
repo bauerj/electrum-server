@@ -28,8 +28,8 @@ import os
 import sys
 import threading
 
-from processor import print_log, logger
-from utils import bc_address_to_hash_160, hash_160_to_pubkey_address, Hash, \
+from .processor import print_log, logger
+from .utils import bc_address_to_hash_160, hash_160_to_pubkey_address, Hash, \
     bytes8_to_int, bytes4_to_int, int_to_bytes8, \
     int_to_hex8, int_to_bytes4, int_to_hex4
 
@@ -52,7 +52,7 @@ class Node(object):
         self.k = int(s[0:32].encode('hex'), 16)
         self.s = s[32:]
         if self.k==0 and self.s:
-            print "init error", len(self.s), "0x%0.64X" % self.k
+            print("init error", len(self.s), "0x%0.64X" % self.k)
             raise BaseException("z")
 
     def serialized(self):
@@ -69,7 +69,7 @@ class Node(object):
         return len(self.s) == 40
 
     def get_singleton(self):
-        for i in xrange(256):
+        for i in range(256):
             if self.k == (1<<i):
                 return chr(i)
         raise BaseException("get_singleton")
@@ -77,7 +77,7 @@ class Node(object):
     def indexof(self, c):
         assert self.k != 0 or self.s == ''
         x = 0
-        for i in xrange(ord(c)):
+        for i in range(ord(c)):
             if (self.k & (1<<i)) != 0:
                 x += 40
         return x
@@ -114,7 +114,7 @@ class Node(object):
         x = 0
         v = 0
         hh = ''
-        for i in xrange(256):
+        for i in range(256):
             if (self.k&(1<<i)) != 0:
                 ss = self.s[x:x+40]
                 hh += ss[0:32]
@@ -132,7 +132,7 @@ class Node(object):
     def from_dict(klass, d):
         k = 0
         s = ''
-        for i in xrange(256):
+        for i in range(256):
             if chr(i) in d:
                 k += 1<<i
                 h, value = d[chr(i)]
@@ -185,7 +185,7 @@ class DB(object):
     def get_next(self, key):
         with self.lock:
             i = self.db.iterator(start=key)
-            k, _ = i.next()
+            k, _ = next(i)
             return k
 
 
@@ -318,7 +318,7 @@ class Storage(object):
         out = set(out)
         # sort by height then tx_hash
         out = sorted(out)
-        return map(lambda x: {'height':x[0], 'tx_hash':x[1]}, out)
+        return [{'height':x[0], 'tx_hash':x[1]} for x in out]
 
     def get_address(self, txi):
         return self.db_addr.get(txi)
@@ -337,7 +337,7 @@ class Storage(object):
     @staticmethod
     def common_prefix(word1, word2):
         max_len = min(len(word1),len(word2))
-        for i in xrange(max_len):
+        for i in range(max_len):
             if word2[i] != word1[i]:
                 index = i
                 break
@@ -423,9 +423,9 @@ class Storage(object):
     def update_hashes(self):
         nodes = {} # nodes to write
 
-        for i in xrange(KEYLENGTH, -1, -1):
+        for i in range(KEYLENGTH, -1, -1):
 
-            for node in self.hash_list.keys():
+            for node in list(self.hash_list.keys()):
                 if len(node) != i:
                     continue
 
@@ -462,7 +462,7 @@ class Storage(object):
                     self.hash_list[parent] = (parent_hash, parent_value)
 
 
-        for k, v in nodes.iteritems():
+        for k, v in nodes.items():
             self.put_node(k, v)
         # cleanup
         assert self.hash_list == {}
