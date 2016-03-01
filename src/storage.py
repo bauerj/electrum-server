@@ -23,9 +23,8 @@
 
 import plyvel
 import ast
-import hashlib
+from binascii import hexlify, unhexlify
 import os
-import sys
 import threading
 
 from .processor import print_log, logger
@@ -49,15 +48,14 @@ KEYLENGTH = 56   # 20 + 32 + 4
 class Node(object):
 
     def __init__(self, s):
-        self.k = int(s[0:32].encode('hex'), 16)
+        self.k = int.from_bytes(s[0:32], 'big')
         self.s = s[32:]
         if self.k==0 and self.s:
             print("init error", len(self.s), "0x%0.64X" % self.k)
             raise BaseException("z")
 
     def serialized(self):
-        k = "0x%0.64X" % self.k
-        k = k[2:].decode('hex')
+        k = self.k.to_bytes(32, 'big')
         assert len(k) == 32
         return k + self.s
 
@@ -65,7 +63,7 @@ class Node(object):
         return (self.k & (1<<(ord(c)))) != 0
 
     def is_singleton(self, key):
-        assert self.s != ''
+        assert self.s != b''
         return len(self.s) == 40
 
     def get_singleton(self):
@@ -75,7 +73,7 @@ class Node(object):
         raise BaseException("get_singleton")
 
     def indexof(self, c):
-        assert self.k != 0 or self.s == ''
+        assert self.k != 0 or self.s == b''
         x = 0
         for i in range(ord(c)):
             if (self.k & (1<<i)) != 0:
@@ -91,7 +89,7 @@ class Node(object):
 
     def set(self, c, h, value):
         if h is None:
-            h = chr(0)*32
+            h = b'\x00' * 32
         vv = int_to_bytes8(value)
         item = h + vv
         assert len(item) == 40
@@ -110,10 +108,10 @@ class Node(object):
     def get_hash(self, x, parent):
         if x:
             assert self.k != 0
-        skip_string = x[len(parent)+1:] if x != '' else ''
+        skip_bytes = x[len(parent)+1:] if x != b'' else b''
         x = 0
         v = 0
-        hh = ''
+        hh = b''
         for i in range(256):
             if (self.k&(1<<i)) != 0:
                 ss = self.s[x:x+40]
@@ -121,7 +119,7 @@ class Node(object):
                 v += bytes8_to_int(ss[32:40])
                 x += 40
         try:
-            _hash = Hash(skip_string + hh)
+            _hash = Hash(skip_bytes + hh)
         except:
             _hash = None
         if x:
@@ -131,18 +129,17 @@ class Node(object):
     @classmethod
     def from_dict(klass, d):
         k = 0
-        s = ''
+        s = b''
         for i in range(256):
             if chr(i) in d:
                 k += 1<<i
                 h, value = d[chr(i)]
-                if h is None: h = chr(0)*32
+                if h is None: h = b'\x00'*32
                 vv = int_to_bytes8(value)
                 item = h + vv
                 assert len(item) == 40
                 s += item
-        k = "0x%0.64X" % k # 32 bytes
-        k = k[2:].decode('hex')
+        k = k.to_bytes(32, 'big')
         assert len(k) == 32
         out = k + s
         return Node(out)
@@ -162,7 +159,7 @@ class DB(object):
 
     def get(self, key):
         s = self.cache.get(key)
-        if s == 'deleted':
+        if s == b'deleted':
             return None
         if s is None:
             with self.lock:
@@ -171,7 +168,7 @@ class DB(object):
 
     def delete(self, key):
         self.batch.delete(key)
-        self.cache[key] = 'deleted'
+        self.cache[key] = b'deleted'
 
     def close(self):
         self.db.close()
@@ -236,7 +233,7 @@ class Storage(object):
         print_log("Database version %d."%db_version)
         print_log("Pruning limit for spent outputs is %d."%self.pruning_limit)
         print_log("Blockchain height", self.height)
-        print_log("UTXO tree root hash:", self.root_hash.encode('hex'))
+        print_log("UTXO tree root hash:", hexlify(self.root_hash))
         print_log("Coins in database:", coins)
 
     # convert between bitcoin addresses and 20 bytes keys used for storage.
@@ -263,7 +260,7 @@ class Storage(object):
         out = []
         for item in p:
             v = self.db_utxo.get(item)
-            out.append((item.encode('hex'), v.encode('hex')))
+            out.append((hexlify(item), hexlify(v)))
         return out
 
     def get_balance(self, addr):
@@ -286,7 +283,7 @@ class Storage(object):
                 if not k.startswith(key):
                     break
                 if len(k) == KEYLENGTH:
-                    txid = k[20:52].encode('hex')
+                    txid = hexlify(k[20:52])
                     txpos = bytes4_to_int(k[52:56])
                     h = bytes4_to_int(v[8:12])
                     v = bytes8_to_int(v[0:8])
@@ -308,9 +305,9 @@ class Storage(object):
         while h:
             item = h[0:80]
             h = h[80:]
-            txi = item[0:32].encode('hex')
+            txi = hexlify(item[0:32])
             hi = bytes4_to_int(item[36:40])
-            txo = item[40:72].encode('hex')
+            txo = hexlify(item[40:72])
             ho = bytes4_to_int(item[76:80])
             out.append((hi, txi))
             out.append((ho, txo))
@@ -359,7 +356,7 @@ class Storage(object):
         path = self.get_path(target, new=True)
         if path is True:
             return
-        #print "add key: target", target.encode('hex'), "path", map(lambda x: x.encode('hex'), path)
+        #print "add key: target", hexlify(target), "path", map(lambda x: hexlify(x), path)
         parent = path[-1]
         parent_node = self.get_node(parent)
         n = len(parent)
@@ -405,7 +402,7 @@ class Storage(object):
             self.put_node(parent, parent_node)
 
         # write the new leaf
-        s = (int_to_hex8(value) + int_to_hex4(height)).decode('hex')
+        s = unhexlify(int_to_hex8(value) + int_to_hex4(height))
         self.db_utxo.put(target, s)
         # the hash of a leaf is the txid
         _hash = target[20:52]
@@ -475,12 +472,12 @@ class Storage(object):
 
         x = self.db_utxo.get(target)
         if not new and x is None:
-            raise BaseException('key not in tree', target.encode('hex'))
+            raise BaseException('key not in tree', hexlify(target))
 
         if new and x is not None:
-            # raise BaseException('key already in tree', target.encode('hex'))
+            # raise BaseException('key already in tree', hexlify(target))
             # occurs at block 91880 (duplicate txid)
-            print_log('key already in tree', target.encode('hex'))
+            print_log('key already in tree', hexlify(target))
             return True
 
         remaining = target
@@ -505,7 +502,7 @@ class Storage(object):
 
     def delete_key(self, leaf):
         path = self.get_path(leaf)
-        #print "delete key", leaf.encode('hex'), map(lambda x: x.encode('hex'), path)
+        #print "delete key", hexlify(leaf), map(lambda x: hexlify(x), path)
 
         s = self.db_utxo.get(leaf)
         self.db_utxo.delete(leaf)
@@ -520,7 +517,7 @@ class Storage(object):
 
         # remove key if it has a single child
         if parent_node.is_singleton(parent):
-            #print "deleting parent", parent.encode('hex')
+            #print "deleting parent", hexlify(parent)
             self.db_utxo.delete(parent)
             if parent in self.hash_list:
                 del self.hash_list[parent]
@@ -536,7 +533,7 @@ class Storage(object):
             new_skip = otherleaf[len(gp)+1:]
             gp_items.set(letter, None, 0)
             self.set_skip(gp+ letter, new_skip)
-            #print "gp new_skip", gp.encode('hex'), new_skip.encode('hex')
+            #print "gp new_skip", hexlify(gp), hexlify(new_skip)
             self.put_node(gp, gp_items)
 
             # note: k is not necessarily a leaf
@@ -573,7 +570,7 @@ class Storage(object):
 
     def add_to_history(self, addr, tx_hash, tx_pos, value, tx_height):
         key = self.address_to_key(addr)
-        txo = (tx_hash + int_to_hex4(tx_pos)).decode('hex')
+        txo = unhexlify(tx_hash + int_to_hex4(tx_pos))
         # write the new history
         self.add_key(key + txo, value, tx_height)
         # backlink
@@ -582,7 +579,7 @@ class Storage(object):
 
     def revert_add_to_history(self, addr, tx_hash, tx_pos, value, tx_height):
         key = self.address_to_key(addr)
-        txo = (tx_hash + int_to_hex4(tx_pos)).decode('hex')
+        txo = unhexlify(tx_hash + int_to_hex4(tx_pos))
         # delete
         self.delete_key(key + txo)
         # backlink
@@ -609,7 +606,7 @@ class Storage(object):
         # add to history
         s = self.db_hist.get(addr)
         if s is None: s = ''
-        txo = (txid + int_to_hex4(index) + int_to_hex4(height)).decode('hex')
+        txo = unhexlify(txid + int_to_hex4(index) + int_to_hex4(height))
         s += txi + int_to_bytes4(in_height) + txo
         s = s[ -80*self.pruning_limit:]
         self.db_hist.put(addr, s)
@@ -644,7 +641,7 @@ class Storage(object):
 
         prev_addr = []
         for i, x in enumerate(tx.get('inputs')):
-            txi = (x.get('prevout_hash') + int_to_hex4(x.get('prevout_n'))).decode('hex')
+            txi = unhexlify(x.get('prevout_hash') + int_to_hex4(x.get('prevout_n')))
             addr = self.get_address(txi)
             if addr is not None:
                 self.set_spent(addr, txi, txid, i, block_height, undo)
@@ -675,7 +672,7 @@ class Storage(object):
         for i, x in reversed(list(enumerate(tx.get('inputs')))):
             addr = prev_addr[i]
             if addr is not None:
-                txi = (x.get('prevout_hash') + int_to_hex4(x.get('prevout_n'))).decode('hex')
+                txi = unhexlify(x.get('prevout_hash') + int_to_hex4(x.get('prevout_n')))
                 self.revert_set_spent(addr, txi, undo)
                 touched_addr.add(addr)
 
