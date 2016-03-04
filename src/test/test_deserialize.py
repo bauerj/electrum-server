@@ -24,7 +24,7 @@ class DeserializeTest(unittest.TestCase):
             'outputs': [
                 {'value': 4999990000,
                  'raw_output_script': b'76a914cbc20a7664f2f69e5355aa427045bc15e7c6c77288ac',
-                 'address': b'KaNd8ybzTDYKpyMB9X2dstvMwo5ogo5bT',
+                 'address': b'1KaNd8ybzTDYKpyMB9X2dstvMwo5ogo5bT',
                  'index': 0
                  }
             ],
