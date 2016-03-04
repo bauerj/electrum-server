@@ -46,7 +46,8 @@ import types
 
 import jsonrpclib
 from jsonrpclib import Fault
-from jsonrpclib.jsonrpc import USE_UNIX_SOCKETS
+
+USE_UNIX_SOCKETS = hasattr(socket, 'AF_UNIX') and hasattr(socket, 'SOCK_STREAM')
 
 try:
     import fcntl
