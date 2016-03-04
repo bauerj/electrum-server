@@ -28,6 +28,7 @@ import hashlib
 import struct
 from binascii import hexlify, unhexlify
 from collections import deque
+from itertools import repeat
 
 __b58chars = b'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 __b58base = len(__b58chars)
@@ -172,7 +173,7 @@ def b58encode(v):
     # leading 0-bytes in the input become leading-1s
     nPad = 0
     for c in v:
-        if c == '\0':
+        if c == 0:
             nPad += 1
         else:
             break
@@ -187,12 +188,12 @@ def b58decode(v, length):
     for (i, c) in enumerate(v[::-1]):
         long_value += __b58chars.find(c) * (__b58base**i)
 
-    result = ''
+    result = deque()
     while long_value >= 256:
         div, mod = divmod(long_value, 256)
-        result = chr(mod) + result
+        result.appendleft(mod)
         long_value = div
-    result = chr(long_value) + result
+    result.appendleft(long_value)
 
     nPad = 0
     for c in v:
@@ -201,11 +202,11 @@ def b58decode(v, length):
         else:
             break
 
-    result = chr(0)*nPad + result
+    result.extendleft(repeat(0, nPad))
     if length is not None and len(result) != length:
         return None
 
-    return result
+    return bytes(result)
 
 
 def EncodeBase58Check(vchIn):
