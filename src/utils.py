@@ -26,8 +26,10 @@ import threading
 import time
 import hashlib
 import struct
+from binascii import hexlify, unhexlify
+from collections import deque
 
-__b58chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+__b58chars = b'123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 __b58base = len(__b58chars)
 
 global PUBKEY_ADDRESS
@@ -36,16 +38,16 @@ PUBKEY_ADDRESS = 0
 SCRIPT_ADDRESS = 5
 
 def rev_hex(s):
-    return s.decode('hex')[::-1].encode('hex')
+    return hexlify(unhexlify(s)[::-1])
 
 
 Hash = lambda x: hashlib.sha256(hashlib.sha256(x).digest()).digest()
 
 
-hash_encode = lambda x: x[::-1].encode('hex')
+hash_encode = lambda x: hexlify(x[::-1])
 
 
-hash_decode = lambda x: x.decode('hex')[::-1]
+hash_decode = lambda x: unhexlify(x)[::-1]
 
 
 def header_to_string(res):
@@ -140,7 +142,7 @@ def hash_160_to_address(h160, addrtype = 0):
     """
     if h160 is None or len(h160) is not 20:
         return None
-    vh160 = chr(addrtype) + h160
+    vh160 = bytes((addrtype,)) + h160
     h = Hash(vh160)
     addr = vh160 + h[0:4]
     return b58encode(addr)
@@ -157,14 +159,14 @@ def b58encode(v):
 
     long_value = 0
     for (i, c) in enumerate(v[::-1]):
-        long_value += (256**i) * ord(c)
+        long_value += (256**i) * c
 
-    result = ''
+    result = deque()
     while long_value >= __b58base:
         div, mod = divmod(long_value, __b58base)
-        result = __b58chars[mod] + result
+        result.appendleft(__b58chars[mod])
         long_value = div
-    result = __b58chars[long_value] + result
+    result.appendleft(__b58chars[long_value])
 
     # Bitcoin does a little leading-zero-compression:
     # leading 0-bytes in the input become leading-1s
@@ -175,7 +177,8 @@ def b58encode(v):
         else:
             break
 
-    return (__b58chars[0]*nPad) + result
+    result.extendleft(__b58chars[0:1]*nPad)
+    return bytes(result)
 
 
 def b58decode(v, length):
