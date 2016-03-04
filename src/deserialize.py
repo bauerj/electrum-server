@@ -6,6 +6,7 @@ import mmap
 import string
 import struct
 import types
+from binascii import hexlify
 
 from .utils import hash_160_to_pubkey_address, hash_160_to_script_address, public_key_to_pubkey_address, hash_encode,\
     hash_160
@@ -117,7 +118,7 @@ class BCDataStream(object):
         return self._write_num('<Q', val)
 
     def read_compact_size(self):
-        size = ord(self.input[self.read_cursor])
+        size = self.input[self.read_cursor]
         self.read_cursor += 1
         if size == 253:
             size = self._read_num('<H')
@@ -172,7 +173,7 @@ class Enumeration:
         for x in enumList:
             if isinstance(x, tuple):
                 x, i = x
-            if not isinstance(x, bytes):
+            if not isinstance(x, str):
                 raise EnumException("enum name is not a string: %r" % x)
             if not isinstance(i, int):
                 raise EnumException("enum value is not an integer: %r" % i)
@@ -196,15 +197,11 @@ class Enumeration:
     def whatis(self, value):
         return self.reverseLookup[value]
 
-
-# This function comes from bitcointools, bct-LICENSE.txt.
-def long_hex(bytes):
-    return bytes.encode('hex_codec')
-
+long_hex = hexlify
 
 # This function comes from bitcointools, bct-LICENSE.txt.
 def short_hex(bytes):
-    t = bytes.encode('hex_codec')
+    t = hexlify(bytes)
     if len(t) < 11:
         return t
     return t[0:4]+"..."+t[-4:]
@@ -224,7 +221,7 @@ def parse_TxOut(vds, i):
     d['value'] = vds.read_int64()
     scriptPubKey = vds.read_bytes(vds.read_compact_size())
     d['address'] = get_address_from_output_script(scriptPubKey)
-    d['raw_output_script'] = scriptPubKey.encode('hex')
+    d['raw_output_script'] = hexlify(scriptPubKey)
     d['index'] = i
     return d
 
@@ -274,13 +271,13 @@ def script_GetOp(bytes):
     i = 0
     while i < len(bytes):
         vch = None
-        opcode = ord(bytes[i])
+        opcode = bytes[i]
         i += 1
 
         if opcode <= opcodes.OP_PUSHDATA4:
             nSize = opcode
             if opcode == opcodes.OP_PUSHDATA1:
-                nSize = ord(bytes[i])
+                nSize = bytes[i]
                 i += 1
             elif opcode == opcodes.OP_PUSHDATA2:
                 (nSize,) = struct.unpack_from('<H', bytes, i)
@@ -331,9 +328,9 @@ def match_decoded(decoded, to_match):
 
 
 
-def get_address_from_output_script(bytes):
+def get_address_from_output_script(output_script_bytes):
     try:
-        decoded = [ x for x in script_GetOp(bytes) ]
+        decoded = [ x for x in script_GetOp(output_script_bytes) ]
     except:
         return None
 
