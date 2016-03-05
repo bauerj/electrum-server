@@ -1,0 +1,16 @@
+# The version of libleveldb in 12.04 is too old, better use trusty (14.04)
+sudo: required
+dist: trusty
+language: python
+python:
+  - "3.2"
+  - "3.3"
+  - "3.4"
+  - "pypy3"
+# command to install dependencies
+install:
+  - sudo apt-get install -y libleveldb-dev python-leveldb
+  - travis_retry python setup.py install
+# command to run tests
+script: 
+  - nosetests
