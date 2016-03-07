@@ -1,3 +1,6 @@
+[![codecov.io](https://codecov.io/github/bauerj/electrum-server/coverage.svg?branch=python3-migration)](https://codecov.io/github/bauerj/electrum-server?branch=python3-migration)
+[![Build Status](https://travis-ci.org/bauerj/electrum-server.svg?branch=python3-migration)](https://travis-ci.org/bauerj/electrum-server)
+
 Electrum-server for the Electrum client
 =========================================
 
