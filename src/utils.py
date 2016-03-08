@@ -81,11 +81,11 @@ int_to_bytes8 = struct.Struct('<Q').pack
 
 
 def int_to_hex4(i):
-    return int_to_bytes4(i).encode('hex')
+    return hexlify(int_to_bytes4(i))
 
 
 def int_to_hex8(i):
-    return int_to_bytes8(i).encode('hex')
+    return hexlify(int_to_bytes8(i))
 
 
 def header_from_string(s):
