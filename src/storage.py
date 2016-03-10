@@ -214,7 +214,7 @@ class Storage(object):
             self.last_hash = GENESIS_HASH
             self.pruning_limit = config.getint('leveldb', 'pruning_limit')
             db_version = DB_VERSION
-            self.put_node('', Node.from_dict({}))
+            self.put_node(b'', Node.from_dict({}))
         # check version
         if db_version != DB_VERSION:
             print_log("Your database '%s' is deprecated. Please create a new database"%self.dbpath)
@@ -225,10 +225,10 @@ class Storage(object):
             self.pruning_limit = ast.literal_eval(self.db_undo.get('limit'))
         except:
             self.pruning_limit = config.getint('leveldb', 'pruning_limit')
-            self.db_undo.put('version', repr(self.pruning_limit))
+            self.db_undo.put(b'version', bytes(self.pruning_limit))
         # compute root hash
-        root_node = self.get_node('')
-        self.root_hash, coins = root_node.get_hash('', None)
+        root_node = self.get_node(b'')
+        self.root_hash, coins = root_node.get_hash(b'', None)
         # print stuff
         print_log("Database version %d."%db_version)
         print_log("Pruning limit for spent outputs is %d."%self.pruning_limit)

@@ -20,7 +20,7 @@
 # ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-
+import codecs
 import hashlib
 from json import dumps, load
 import os
@@ -41,7 +41,6 @@ class BlockchainProcessor(Processor):
 
     def __init__(self, config, shared):
         Processor.__init__(self)
-
         # monitoring
         self.avg_time = 0,0,0
         self.time_ref = time.time()
@@ -151,7 +150,7 @@ class BlockchainProcessor(Processor):
             raise BaseException()
 
     def bitcoind(self, method, params=()):
-        postdata = dumps({"method": method, 'params': params, 'id': 'jsonrpc'})
+        postdata = bytes(dumps({"method": method, 'params': params, 'id': 'jsonrpc'}), "UTF-8")
         while True:
             try:
                 response = urllib.request.urlopen(self.bitcoind_url, postdata)
@@ -229,7 +228,7 @@ class BlockchainProcessor(Processor):
 
     @staticmethod
     def hash_header(header):
-        return rev_hex(Hash(header_to_string(header).decode('hex')).encode('hex'))
+        return rev_hex(codecs.encode(Hash(codecs.decode(header_to_string(header), 'hex')), 'hex'))
 
     def read_header(self, block_height):
         if os.path.exists(self.headers_filename):
@@ -250,7 +249,7 @@ class BlockchainProcessor(Processor):
         if not self.headers_data:
             self.headers_offset = header.get('block_height')
 
-        self.headers_data += header_to_string(header).decode('hex')
+        self.headers_data += str(codecs.decode(header_to_string(header), 'hex'))
         if sync or len(self.headers_data) > 40*100:
             self.flush_headers()
 
@@ -269,7 +268,7 @@ class BlockchainProcessor(Processor):
             return
         with open(self.headers_filename, 'rb+') as f:
             f.seek(self.headers_offset*80)
-            f.write(self.headers_data)
+            f.write(bytes(self.headers_data, "UTF-8"))
         self.headers_data = ''
 
     def get_chunk(self, i):
