@@ -30,7 +30,7 @@ import Queue
 import irc.client
 from utils import logger
 from utils import Hash
-from version import VERSION
+from version import PROTOCOL_VERSION
 
 out_msg = []
 
@@ -64,7 +64,7 @@ class IrcThread(threading.Thread):
         self.who_queue = Queue.Queue()
 
     def getname(self):
-        s = 'v' + VERSION + ' '
+        s = 'v' + PROTOCOL_VERSION + ' '
         if self.pruning:
             s += 'p' + self.pruning_limit + ' '
 

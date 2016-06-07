@@ -184,6 +184,10 @@ def cmd_peers():
 def cmd_numpeers():
     return len(server_proc.peers)
 
+def cmd_version():
+    from electrumserver import version
+    return version.VERSION
+
 
 hp = None
 def cmd_guppy():
@@ -317,6 +321,7 @@ if __name__ == '__main__':
     server.register_function(cmd_debug, 'debug')
     server.register_function(cmd_guppy, 'guppy')
     server.register_function(cmd_banner_update, 'banner_update')
+    server.register_function(cmd_version, 'version')
     server.socket.settimeout(1)
  
     while not shared.stopped():
